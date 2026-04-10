@@ -186,5 +186,4 @@ def log_operation(operation_name: str):
         return wrapper
     return decorator
 
-# Configure logger when module is imported
-setup_logger() 
+logging.getLogger("ebook_mcp").addHandler(logging.NullHandler())

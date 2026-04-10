@@ -1,4 +1,4 @@
-import os
+import argparse
 from typing import Any,List,Dict,Union,Tuple, Callable, TypeVar
 from functools import wraps
 from mcp.server.fastmcp import FastMCP
@@ -6,9 +6,7 @@ from ebooklib import epub
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
 from ebook_mcp.tools import epub_helper, pdf_helper
-import logging
-from datetime import datetime
-from ebook_mcp.tools.logger_config import setup_logger  # Import logger config
+from ebook_mcp.tools.logger_config import setup_logger, get_logger
 
 # Type variable for generic function return type
 T = TypeVar('T')
@@ -48,24 +46,7 @@ def handle_pdf_errors(func: Callable[..., T]) -> Callable[..., T]:
             raise Exception(str(e))
     return wrapper
 
-
-log_dir = "logs"
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-log_file = os.path.join(log_dir, f"ebook-mcp_server_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(log_file),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
-
-
+logger = get_logger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP("ebook-MCP")
@@ -229,11 +210,19 @@ def get_pdf_chapter_content(pdf_path: str, chapter_title: str) -> Tuple[str, Lis
     logger.debug(f"calling get_pdf_chapter_content: {pdf_path}, chapter: {chapter_title}")
     return pdf_helper.extract_chapter_by_title(pdf_path, chapter_title)
 
-if __name__ == "__main__":
-    # Initialize and run the server
-    logger.info("Server is starting.....")
-    mcp.run(transport='stdio')
-
 def cli_entry():
-    logger.info("Starting ebook-mcp server")
-    mcp.run(transport='stdio')
+    parser = argparse.ArgumentParser(description="ebook-mcp server")
+    parser.add_argument(
+        "--logging-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default=None,
+        type=str.upper,
+        help="Enable logging at the given level (default: no logging)",
+    )
+    args = parser.parse_args()
+    if args.logging_level:
+        setup_logger(level=args.logging_level)
+    mcp.run(transport="stdio")
+
+if __name__ == "__main__":
+    cli_entry()
